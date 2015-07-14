@@ -1,0 +1,5 @@
+etc0/
+work/
+*.aux
+*.log
+test*

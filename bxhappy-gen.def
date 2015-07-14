@@ -1,0 +1,176 @@
+%
+% bxhappy-gen.def
+%
+
+%% avoid duplicate loading
+\csname bxhappy-gen.def@loaded\endcsname
+\@namedef{bxhappy-gen.def@loaded}{\endinput}
+%% file declaration
+\ProvidesFile{bxhappy-gen.def}[2015/08/01]
+
+%----------------------------------- module 'pict2e'
+
+\HappyDeclareModule{pict2e}{*}{%
+  \@ifpackageloaded{pict2e}{%
+    \bxhp@info{Package 'pict2e' is already loaded}%
+  }{%else
+    \IfFileExists{p2e-#2.def}{%
+      \PassOptionsToPackage{#2}{pict2e}}{}%
+  }}
+\HappyAtEndPackage{\HappyDoModule{pict2e}}
+
+%----------------------------------- module 'pict2e-check'
+
+\HappyDeclareModule{pict2e-check}{*}{%
+  \@ifpackageloaded{pict2e}{%
+    \bxhp@m@pictIIe@check{#2}%
+  }{}}
+\HappyDeclareModule{pict2e-check}{PTEXNG}{%
+  \@ifpackageloaded{pict2e}{%
+    \bxhp@m@pictIIe@check{dvipdfmx}%
+  }{}}
+\def\bxhp@m@pictIIe@check#1{%
+  \IfFileExists{p2e-#1.def}{%
+    \if\bxhp@iscsdef{ver@p2e-#1.def}\else
+      \HappyError{Wrong driver of pict2e is used}%
+        {You should add '#1' to the package options.}%
+    \fi
+  }{}}
+
+%----------------------------------- module 'pgf-check'
+
+\HappyDeclareModule{pgf-check}{DVIPS,DVIPDFMX}{%
+  \@ifpackageloaded{pgfcore}{%
+    \IfFileExists{pgfsys-#2.def}{%
+      \def\bxhp@m@tmpa{pgfsys-#2.def}%
+      \ifx\bxhp@m@tmpa\pgfsysdriver\else
+        \HappyError{Wrong driver of PGF/TikZ is used}%
+          {You should add '#2' to the option list\\%
+           of \string\documentclass.}%
+      \fi
+    }{}%
+  }{}}
+
+%----------------------------------- module 'mediabb-patch'
+
+%% switches
+\newif\ifbxhp@mmbb@g@ok
+%% the module
+\HappyDeclareModule{mediabb-patch}{DVIPDFMX}{%
+  \@ifpackageloaded{tcxmediabb}{}{%else
+    \bxhp@m@mediabb@patch
+    % block it, and tell mediabb-check it's ok
+    \@namedef{ver@tcxmediabb.sty}{2100/01/01}%
+  }}
+%% patch to mediabb package (cf. tcxmediabb.sty)
+\@onlypreamble\bxhp@m@mediabb@patch
+\def\bxhp@m@mediabb@patch{%
+  %% preparation
+  \PassOptionsToPackage{dvipdfmx}{graphicx}%
+  \let\bxhp@mmbb@O@Ginclude@pdf\Ginclude@pdf
+  \let\bxhp@mmbb@O@Gread@pdf\Gread@pdf
+  \let\bxhp@mmbb@O@Gread@bmp\Gread@bmp
+  \AtEndOfPackageFile{mediabb}{\bxhp@m@mediabb@patch@post}}
+\@onlypreamble\bxhp@m@mediabb@patch@post
+\def\bxhp@m@mediabb@patch@post{%
+  %% repair things
+  \let\bxhp@mmbb@M@Gread@pdf\Gread@pdf
+  \@namedef{Gin@rule@.pdf}##1{{pdf}{.xbb}{##1}}%
+  \let\Ginclude@pdf\bxhp@mmbb@O@Ginclude@pdf
+  \let\Gread@pdf\bxhp@mmbb@O@Gread@pdf
+  \let\Gread@bmp\bxhp@mmbb@O@Gread@bmp
+  %% annihilate ebb things
+  \let\setebbdirectorypath\@gobble
+  \let\Gread@ebb@path\@empty
+  \define@key{Gin}{autoebb}[]{\Gread@ebb@never}
+  \def\Gread@ebb@never{%
+    \HappyWarning{Option 'autoebb' is annihilated}{}%
+    \global\let\Gread@ebb@never\relax}%
+  \bxhp@csletcs{if@Gread@ebb@always}{iffalse}%
+  \bxhp@csletcs{if@Gread@ebb@never}{iftrue}%
+  \let\Gread@ebb@always\relax
+  \let\Gread@ebb@true\relax
+  \let\Gread@ebb@false\relax
+  %% \Gread@pdf
+  \def\Gread@pdf##1{%
+    \global\bxhp@mmbb@g@okfalse
+    \if@usebb\else % if mediabb process is enabled
+      \begingroup
+        \bxDebug{\Gin@base\Gin@ext: try shallow parse}%
+        \global\bxhp@mmbb@g@oktrue
+        \def\Gread@bmp####1{% this is invoked in failure
+          \global\bxhp@mmbb@g@okfalse
+          \gdef\@gtempa{0 0 1 1 }% dummy
+        }%
+        \bxhp@mmbb@M@Gread@pdf{\Gin@base\Gin@ext}% arg#1 is pdf file
+      \endgroup
+      \bxDebug{\Gin@base\Gin@ext: \ifbxhp@mmbb@g@ok ok (\@gtempa)\else ng\fi}%
+      \expandafter\Gread@parse@bb\@gtempa\\% do it again
+    \fi
+    \ifbxhp@mmbb@g@ok\else
+      \bxDebug{\Gin@base\Gin@ext: try read ##1}%
+      \bxhp@mmbb@O@Gread@pdf{##1}%
+        % this always tells (right or wrong) bbox
+    \fi
+    \bxDebug{\Gin@base\Gin@ext: bbox=(\@gtempa)}}%
+  \bxhp@info{Patch applied to 'mediabb'}}
+\HappyDoModuleAtUsePackage{mediabb-patch}{mediabb}
+
+%----------------------------------- module 'mediabb-check'
+
+\HappyDeclareModule{mediabb-check}{*}{%
+  \@ifpackageloaded{mediabb}{%
+    \bxhp@m@mediabb@check{#2}%
+  }{}}
+\HappyDeclareModule{mediabb-check}{DVIPDFM}{%
+  \bxhp@module@noop{#1}{#2}}
+\HappyDeclareModule{mediabb-check}{DVIPDFMX}{%
+  \@ifpackageloaded{mediabb}{%
+    \@ifpackageloaded{tcxmediabb}{}{%else
+      \bxhp@m@mediabb@check{#2}%
+    }%
+  }{}}
+\def\bxhp@m@mediabb@check#1{%
+  \HappyError{Package 'mediabb' is incompatible with current settings}%
+    {Package mediabb requires use of dvipdfm (not dvipdfmx).}}
+
+%----------------------------------- module 'Beamer-patch'
+
+\HappyDeclareModule{beamer-patch}{DVIPDFMX}{%
+  \@ifclassloaded{beamer}{%
+    \IfFileExists{bxdpx-beamer.sty}{%
+      \RequirePackage{bxdpx-beamer}[]%
+      \bxhp@info{Package 'bxdpx-beamer' is loaded}%
+    }{%else
+      \HappyWarning{Package 'bxdpx-beamer' is not installed}%
+        {You should get and install 'bxdpx-bamer' package, \\%
+         because it will fix some problems in using \\%
+         beamer + dvipdfmx.}%
+    }%
+  }{}}
+
+%----------------------------------- module 'expl3-driver'
+
+\HappyDeclareModule{expl3-driver}{DVIPS,DVIPDFMX}{%
+  \PassOptionsToPackage{driver=#2}{expl3}}
+\HappyDoModuleAtEndPackage{expl3-driver}
+
+%----------------------------------- module 'expl3-patch'
+
+\HappyDeclareModule{expl3-patch}{*}{%
+  \input{bxhappy-expl.def}%
+  \bxhp@info{Some adjustment for expl3}%
+  %% driver check in humility
+  \edef\bxhp@m@tmpa{\@nameuse{l__expl_driver_tl}}%
+  \def\bxhp@m@tmpb{dvips}%
+  \ifx\bxhp@m@tmpa\bxhp@m@tmpb
+    \ifx\bxhp@drvoption\bxhp@m@tmpb\else
+      \bxhp@info{Package 'expl3' uses driver '\bxhp@m@tmpb'}%
+  \fi\fi
+  
+  }
+\HappyDoModuleAtEndUsePackage{expl3-patch}{expl3}
+
+%----------------------------------- done
+\endinput
+%% EOF

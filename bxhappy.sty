@@ -1,0 +1,587 @@
+%
+% bxhappy.sty
+%
+%% package declaration
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{bxhappy}[2015/08/01 v0.2]
+
+%% preparations
+\def\bxhp@pkgname{bxhappy}
+\def\bxhp@error{\PackageError\bxhp@pkgname}
+\def\bxhp@warn{\PackageWarningNoLine\bxhp@pkgname}
+\def\bxhp@info{\PackageInfo\bxhp@pkgname}
+\ifx\bxUseDebug\@undefined\else
+\providecommand\bxDebug[1]{}
+\def\bxhp@info{\PackageWarning\bxhp@pkgname}
+\fi
+\newif\ifbxhp@ok
+\newif\ifbxhp@etoolbox
+
+%----------------------------------- environment check
+
+%% load the required package
+\RequirePackage{filehook}[]
+\@ifpackageloaded{filehook}{}{%else
+  \bxhp@error{Package 'filehook' not found}%
+   {Package loading is aborted.}%
+  \endinput\relax
+}
+
+%----------------------------------- helpers
+
+%% variables
+\let\bxhp@res\relax
+\@onlypreamble\bxhp@tmpa
+\@onlypreamble\bxhp@tmpb
+\@onlypreamble\bxhp@glb
+\@onlypreamble\bxhp@pkg
+
+%% constants
+\def\bxhp@@ast{*}
+
+%% unique tokens
+\def\bxhp@end{\bxhp@end@}
+\def\bxhp@mt{\bxhp@mt@}
+\let\bxhp@term\indent
+
+%% \bxhp@cond\ifXXX...\fi
+\@gobbletwo\if\if \def\bxhp@cond#1\fi{%
+  #1\expandafter\@firstoftwo
+  \else\expandafter\@secondoftwo
+  \fi}
+
+%% \bxhp@check\ifXXX...\fi
+\@gobbletwo\if\if \def\bxhp@check#1\fi{%
+  #1\bxhp@oktrue \else \bxhp@okfalse \fi}
+
+\def\bxhp@check@primitive#1{%
+  \edef\bxhp@tmpa{\string#1}\edef\bxhp@tmpb{\meaning#1}%
+  \bxhp@check\ifx\bxhp@tmpa\bxhp@tmpb\fi}
+
+%% \bxx@engine
+% Engine type: d / p / x / j.
+\let\bxhp@engine=d % dvi-mode
+\bxhp@check@primitive\pdfoutput \ifbxhp@ok \ifnum\pdfoutput>\z@
+  \let\bxhp@engine=p %pdf-mode
+\fi\fi
+\bxhp@check@primitive\XeTeXversion \ifbxhp@ok
+  \let\bxhp@engine=x % XeTeX
+\fi
+\bxhp@check@primitive\kanjiskip \ifbxhp@ok
+  \let\bxhp@engine=j % pTeX
+\fi
+\bxhp@check@primitive\ngbanner \ifbxhp@ok
+  \let\bxhp@engine=n % pTeX-ng
+\fi
+
+%% \if\bxhp@iscsdef{<csname>}...\fi
+\def\bxhp@iscsdef#1{%
+  \expandafter\ifx\csname#1\endcsname\relax F\else T\fi T}
+
+%% \bxhp@basename{<filename>}
+% Expands to the basename.
+\def\bxhp@basename#1{%
+  \expandafter\bxhp@basename@a#1.\bxhp@end}
+\def\bxhp@basename@a#1.#2\bxhp@end{#1}
+
+%----------------------------------- etoolbox
+
+%% load the package if available
+\bxhp@check@primitive\eTeXversion \ifbxhp@ok
+  \IfFileExists{etoolbox.sty}{%
+    \RequirePackage{etoolbox}[]%
+    \bxhp@etoolboxtrue
+  }{}
+\fi
+
+%% \bxhp@cslet, etc.
+\ifbxhp@etoolbox
+\let\bxhp@cslet\cslet
+\let\bxhp@letcs\letcs
+\let\bxhp@csletcs\csletcs
+\else
+\def\bxhp@cslet#1#2{%
+  \expandafter\let\csname#1\endcsname=#2}
+\def\bxhp@letcs#1#2{%
+  \expandafter\let\expandafter#1\csname#2\endcsname}
+\def\bxhp@csletcs#1#2{%
+  \expandafter\let\csname#1\expandafter\endcsname\csname#2\endcsname}
+\fi
+
+%%<+> \HappyAtEndPreamble{<code>}
+% The original hook located inside etoolbox's \AtEndPreamble.
+\@onlypreamble\HappyAtEndPreamble
+\def\HappyAtEndPreamble{%
+  \g@addto@macro\bxhp@end@preamble@hook}
+\@onlypreamble\bxhp@end@preamble@hook
+\let\bxhp@end@preamble@hook\@empty
+\ifbxhp@etoolbox
+  \AtEndPreamble{\bxhp@end@preamble@hook@proc}
+\else
+  \begingroup
+    % imitate \AtEndPreamble...
+    \toks@\expandafter{\document}
+    \xdef\document{%
+      \endgroup
+      \noexpand\bxhp@end@preamble@hook@proc
+      \begingroup
+      \the\toks@}
+  \endgroup
+\fi
+\@onlypreamble\bxhp@end@preamble@hook@proc
+\def\bxhp@end@preamble@hook@proc{%
+  \let\HappyIfInEndPreamble\@firstoftwo
+  \let\HappyAtEndPreamble\@firstofone
+  \bxhp@end@preamble@hook
+  \let\HappyIfInEndPreamble\@secondoftwo}
+
+%%<+> \HappyIfInEndPreamble{<true>}{<false>}
+\let\HappyIfInEndPreamble\@firstoftwo
+
+%%<+> \HappyAtEndPackage{<code>}
+\@onlypreamble\HappyAtEndPackage
+\newcommand*\HappyAtEndPackage{%
+  \g@addto@macro\bxhp@end@package@hook}
+\@onlypreamble\bxhp@end@package@hook
+\let\bxhp@end@package@hook\@empty
+\AtEndOfPackage{%
+  \bxhp@end@package@hook
+  \let\HappyAtEndPackage\@firstofone}
+
+%----------------------------------- nag screen
+
+%% variables
+\let\bxhp@screen@body\relax
+\let\bxhp@msg@body\relax
+
+%%<+> \HappyScreen{<frame-char>}{<message>}
+\def\HappyScreen#1{%
+  \begingroup
+    \edef\bxhp@frch{#1}%
+    \def\\{^^J\bxhp@frch\space}%
+    \let\/\space \let~\space
+    \afterassignment\bxhp@screen@a \edef\bxhp@screen@body}
+\def\bxhp@screen@a{%
+    \immediate\write\@unused{%
+      \bxhp@frline\\\bxhp@screen@body^^J\bxhp@frline}%
+  \endgroup}
+\begingroup
+  \def~{\noexpand\bxhp@frch}
+  \xdef\bxhp@frline{%
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~}
+\endgroup
+
+%%<*> \HappyError[<pkg>]{<headline>}{<message>}
+\newcommand*\HappyError[2][\bxhp@pkgname]{%
+  \bxhp@showinfo{#1}{!}{*ERROR*}{#2}{%
+    \PackageError{#1}{#2}\@ehc}}
+\newcommand*\HappyWarning[2][\bxhp@pkgname]{%
+  \bxhp@showinfo{#1}{!}{*WARNING*}{#2}{%
+    \PackageWarningNoLine{#1}{#2}}}
+\newcommand*\HappyInfo[2][\bxhp@pkgname]{%
+  \bxhp@showinfo{#1}{*}{INFO}{#2}{}}
+\def\bxhp@showinfo#1#2#3#4#5#6{%
+  \def\bxhp@msg@body{#6}%
+  \HappyScreen{#2}{%
+    #3 @ package '#1'%
+    \ifx\@currext\@empty \space(line \the\inputlineno)\fi
+    :\\#4.%
+    \ifx\bxhp@msg@body\@empty\else \\\\\bxhp@msg@body \fi}%
+  \begingroup
+    \let\/\MessageBreak \let\\\MessageBreak \let~\space
+    #5%
+  \endgroup}
+
+%----------------------------------- handle options
+
+%% \bxhp@driver@list
+%% \bxhp@dty/*
+\@onlypreamble\bxhp@declare@driver
+\def\bxhp@declare@driver#1#2{%
+  \let\do\relax
+  \edef\bxhp@driver@list{\bxhp@driver@list\do{#1}}%
+  \@namedef{bxhp@dty/#1}{#2}}
+\@onlypreamble\bxhp@driver@list
+\let\bxhp@driver@list\@empty
+\bxhp@declare@driver{dvips}{DVIPS}
+\bxhp@declare@driver{dvipdfm}{DVIPDFM}
+\bxhp@declare@driver{dvipdfmx}{DVIPDFMX}
+\bxhp@declare@driver{dviout}{OTHERDVI}
+\bxhp@declare@driver{xdvi}{OTHERDVI}
+\bxhp@declare@driver{pdftex}{OTHERPDF}
+\bxhp@declare@driver{xetex}{XETEX}
+\bxhp@declare@driver{ptex-ng}{PTEXNG}
+
+%% \bxhp@drvoption@list
+% A struct-list of specified options.
+% (\bxhp@glb{...}/\bxhp@pkg{....})
+\@onlypreamble\bxhp@drvoption@list
+\let\bxhp@drvoption@list\@empty
+\let\bxhp@glb\relax \let\bxhp@pkg\relax
+\@for\bxhp@x:=\@classoptionslist\do{%
+  \if\bxhp@iscsdef{bxhp@dty/\bxhp@x}%
+    \edef\bxhp@drvoption@list{\bxhp@drvoption@list\bxhp@glb{\bxhp@x}}%
+  \fi}
+\edef\bxhp@tmpa{\@nameuse{opt@\@currname.\@currext}}
+\@for\bxhp@x:=\bxhp@tmpa\do{%
+  \if\bxhp@iscsdef{bxhp@dty/\bxhp@x}%
+    \edef\bxhp@drvoption@list{\bxhp@drvoption@list\bxhp@pkg{\bxhp@x}}%
+  \fi}
+
+%% \bxhp@skip/*
+\relax
+
+%% handlers
+% (drivers)
+\def\do#1{\DeclareOption{#1}{}}
+\bxhp@driver@list % treat the option as used
+% (skip)
+\DeclareOption*{%
+  \bxhp@check@skip \ifbxhp@ok
+    \bxhp@cslet{bxhp@skip/\bxhp@res}{t}%
+  \else \@unknownoptionerror
+  \fi}
+\@onlypreamble\bxhp@check@skip
+\def\bxhp@check@skip{%
+  \expandafter\bxhp@check@skip@a\CurrentOption @skip-@\bxhp@end}
+\@onlypreamble\bxhp@check@skip@a
+\def\bxhp@check@skip@a #1skip-#2@#3\bxhp@end{%
+  \bxhp@check\ifx\bxhp@mt#1\bxhp@mt\fi
+  \def\bxhp@res{#2}}
+%
+\ProcessOptions*
+
+%----------------------------------- driver option
+
+%% \bxhp@drvoption
+\let\bxhp@drvoption\relax
+
+%% \bxhp@drvoption
+\let\bxhp@drvoption\relax
+
+%% show all options specified
+\def\bxhp@glb#1{\MessageBreak\@spaces global: #1}
+\def\bxhp@pkg#1{\MessageBreak\@spaces package: #1}
+\bxhp@info{All given driver options:%
+  \bxhp@drvoption@list \MessageBreak}
+
+%% resolve from options explicitly given
+\begingroup
+  \global\bxhp@oktrue
+  \let\bxhp@tmpa\@empty
+  \def\bxhp@glb#1{%
+    \gdef\bxhp@drvoption{#1}%
+    \if\bxhp@iscsdef{bxhp@chk/#1}\else
+      \bxhp@cslet{bxhp@chk/#1}{t}%
+      \ifx\bxhp@tmpa\@empty
+        \def\bxhp@tmpa{#1}%
+      \else
+        \global\bxhp@okfalse
+        \edef\bxhp@tmpa{\bxhp@tmpa,#1}%
+      \fi
+    \fi}
+  \let\bxhp@pkg\bxhp@glb
+  \bxhp@drvoption@list
+  \ifbxhp@ok\else % error
+    \HappyError{Conflicting driver options found}%
+      {You've given the following options:\\%
+       \bxhp@tmpa;\\%
+       but you should use only one driver option,\\%
+       i.e. the one you really want to use.}
+  \fi
+\endgroup
+
+%% resolve from engine type
+\ifx\bxhp@drvoption\relax
+  \ifx p\bxhp@engine
+    \def\bxhp@drvoption{pdftex}
+  \else\ifx x\bxhp@engine
+    \def\bxhp@drvoption{xetex}
+  \else\ifx n\bxhp@engine
+    \def\bxhp@drvoption{ptex-ng}
+  \fi\fi\fi
+\fi
+
+%% resolve from config file
+\ifx\bxhp@drvoption\relax
+  \begingroup
+    \def\bxhp@line@a#1 #2\relax{%
+      \def\bxhp@tmpa{#1}}
+    \def\bxhp@line@b#1#2\relax#3{%
+      \ifx#1#3\let\bxhp@tmpa\@empty\fi}
+    \openin\@inputcheck=\bxhp@pkgname.cfg\relax
+    \ifeof\@inputcheck\else
+      \bxhp@info{Reading from '\bxhp@pkgname.cfg'...}%
+      \lccode`\?=`\%
+      \lowercase{\begingroup
+        \let\do\@makeother\dospecials \catcode32=10
+        \endlinechar\m@ne
+        \bxhp@oktrue \loop \ifbxhp@ok
+          \read\@inputcheck to\bxhp@tmpa
+          \ifx\bxhp@tmpa\@empty \def\bxhp@tmpa{?}\fi
+          \edef\bxhp@tmpa{\bxhp@tmpa\space\relax}%
+          \expandafter\bxhp@line@a\bxhp@tmpa
+          \expandafter\bxhp@line@b\bxhp@tmpa\relax?%
+          \ifx\bxhp@tmpa\@empty\else
+            \global\let\bxhp@drvoption\bxhp@tmpa
+            \bxhp@okfalse
+          \fi
+          \ifeof\@inputcheck \bxhp@okfalse \fi
+        \repeat
+      \endgroup}%
+    \fi
+    \closein\@inputcheck
+  \endgroup
+  \ifx\bxhp@drvoption\relax\else
+    \if\bxhp@iscsdef{bxhp@dty/\bxhp@drvoption}\else
+      \HappyError{Illegal driver option '\bxhp@drvoption'}%
+        {This value was obtained from \bxhp@pkgname.cfg.}%
+      \let\bxhp@drvoption\relax
+    \fi
+  \fi
+\fi
+
+%% if still unknown
+\ifx\bxhp@drvoption\relax
+  \def\bxhp@drvoption{dvips}% default value
+  \HappyWarning{Driver option is not specified}%
+    {The default value '\bxhp@drvoption' is assumed.}
+\fi
+
+%% set \bxhp@drvtype
+\edef\bxhp@drvtype{%
+  \@nameuse{bxhp@dty/\bxhp@drvoption}}
+
+%% inform the value
+\HappyInfo{%
+  Driver option is '\bxhp@drvoption'}{}
+
+%----------------------------------- module system
+
+%% variables
+\@onlypreamble\bxhp@m@tmpa
+\let\bxhp@m@tmpa\relax
+\@onlypreamble\bxhp@m@tmpb
+\let\bxhp@m@tmpb\relax
+
+%% \bxhp@module@list
+\@onlypreamble\bxhp@module@list
+\let\bxhp@module@list\@empty
+
+%%<+> \HappyDeclareModule{<name>}{<drvtype>,...}{<code>}
+\@onlypreamble\HappyDeclareModule
+\newcommand*\HappyDeclareModule[2]{%
+  \let\do\relax
+  \if\bxhp@iscsdef{bxhp@mod/#1}\else
+    \edef\bxhp@module@list{\bxhp@module@list\do{#1}}%
+  \fi
+  \bxhp@check@drvtype{#2}%
+  \expandafter\bxhp@declare@module@a\csname bxhp@mod/#1\endcsname}
+\@onlypreamble\bxhp@declare@module@a
+\def\bxhp@declare@module@a#1{%
+  \ifbxhp@ok
+    \@onlypreamble#1%
+    \def\bxhp@tmpa{\def#1}%
+  \else
+    \ifx#1\relax \let#1\bxhp@module@noop \fi
+    \def\bxhp@tmpa{\def\bxhp@tmpa}%
+  \fi
+  \bxhp@tmpa##1##2}
+
+%% \bxhp@module@noop
+\@onlypreamble\bxhp@module@noop
+\def\bxhp@module@noop#1#2{%
+  \bxhp@info{Module '#1' is a no-op on driver '#2'\MessageBreak}}
+
+%% \bxhp@module@finis
+\@onlypreamble\bxhp@module@finis
+\def\bxhp@module@finis#1#2{%
+  \bxhp@module@finis@}
+\let\bxhp@module@finis@\relax
+
+%% \bxhp@check@drvtype{<list>,...}
+\@onlypreamble\bxhp@check@drvtype
+\def\bxhp@check@drvtype#1{%
+  \edef\bxhp@tmpb{#1}%
+  \ifx\bxhp@tmpb\bxhp@@ast
+    \bxhp@oktrue
+  \else
+    \bxhp@okfalse
+    \@for\bxhp@x:=\bxhp@tmpb\do{%
+      \ifx\bxhp@x\bxhp@drvtype \bxhp@oktrue \fi}%
+  \fi}
+
+%%<+> \HappyDoModule{<name>}
+\@onlypreamble\HappyDoModule
+\newcommand*\HappyDoModule[1]{%
+  \edef\bxhp@tmpa{{#1}{\bxhp@drvoption}}%
+  \expandafter\bxhp@do@module@a\csname bxhp@mod/#1\expandafter
+   \endcsname\bxhp@tmpa}
+\@onlypreamble\bxhp@do@module@a
+\def\bxhp@do@module@a#1#2#3{%
+  \ifx#1\bxhp@module@finis\else
+    \if\bxhp@iscsdef{bxhp@skip/#2}%
+      \bxhp@info{Module '#2' is skipped}%
+    \else
+      \bxhp@cslet{bxhp@ff/#2}{t}%
+      #1{#2}{#3}%
+    \fi
+    \let#1\bxhp@module@finis
+  \fi}
+
+%% end-preamble hook
+\HappyAtEndPreamble{%
+  \let\bxhp@tmpa\@empty
+  \def\do#1{%
+    \if\bxhp@iscsdef{bxhp@ndf/#1}\else
+      \g@addto@macro\bxhp@tmpa{\HappyDoModule{#1}}%
+    \fi}%
+  \bxhp@module@list
+  \bxhp@tmpa}
+
+%%<+> \HappySkip*{<name>,...}
+\@onlypreamble\HappySkip
+\newcommand*\HappySkip{%
+  \@ifstar{\bxhp@skip@a\HappyWarning}%
+    {\bxhp@skip@a\HappyError}}
+\@onlypreamble\bxhp@skip@a
+\def\bxhp@skip@a#1#2{%
+  \@for\bxhp@x:=#2\do{%
+    \if\bxhp@iscsdef{bxhp@ff/\bxhp@x}%
+      #1{Module '\bxhp@x' is aldready done}{}%
+    \else\if\bxhp@iscsdef{bxhp@skip/\bxhp@x}\else
+      \bxhp@cslet{bxhp@skip/\bxhp@x}{t}%
+      \HappyWarning{Module '\bxhp@x' is set to be skipped}{}%
+    \fi\fi}}
+
+%%<+> \HappyDoModuleAtEndPackage
+\newcommand*\HappyDoModuleAtEndPackage[1]{%
+  \HappyAtEndPackage{\HappyDoModule{#1}}}
+
+%%<+> \HappyDoModuleAtUsePackage
+\newcommand*\HappyDoModuleAtUsePackage[2]{%
+  \bxhp@cslet{bxhp@ndf/#1}{t}%
+  \@ifpackageloaded{#2}{%
+    \HappyWarning{Package '#2' is already loaded}%
+      {Module '#1' cannot be executed.}%
+  }{%else
+    \AtBeginOfPackageFile{#2}{\HappyDoModule{#1}}%
+  }}
+
+%%<+> \HappyDoModuleAtEndUsePackage
+\newcommand*\HappyDoModuleAtEndUsePackage[2]{%
+  \bxhp@cslet{bxhp@ndf/#1}{t}%
+  % if already loaded, do right now
+  \AtEndOfPackageFile*{#2}{\HappyDoModule{#1}}%
+  }
+
+%----------------------------------- module 'engine-check'
+
+\HappyDeclareModule{engine-check}{*}{%
+  \ifx p\bxhp@engine
+     \bxhp@m@engine@check@sub{OTHERPDF}{pdftex}{PDF-mode engine}%
+  \else\ifx x\bxhp@engine
+     \bxhp@m@engine@check@sub{XETEX}{xetex}{XeTeX engine}%
+  \else\ifx n\bxhp@engine
+     \bxhp@m@engine@check@sub{PTEXNG}{ptex-ng}{pTeX-ng engine}%
+  \else
+     \bxhp@m@engine@check@sub{DVIPS,DVIPDFMX,DVIPDFM,OTHERDVI}{dvips}%
+       {DVI-mode engine}%
+  \fi\fi\fi}
+\@onlypreamble\bxhp@m@engine@check@sub
+\def\bxhp@m@engine@check@sub#1#2#3{%
+  \bxhp@okfalse
+  \@for\bxhp@x:={#1}\do{%
+    \ifx\bxhp@x\bxhp@drvtype \bxhp@oktrue \fi}%
+  \ifbxhp@ok\else
+    \HappyError{Driver option is incompativle with the engine}%
+      {The option '\bxhp@drvoption' cannot be used with #3.\\%
+       You should check if you run the right engine.\\%
+       The driver option will be changed to '#2'.}%
+    \def\bxhp@drvoption{#2}%
+    \edef\bxhp@drvtype{\@nameuse{bxhp@dty/#2}}%
+  \fi}
+% This module is immediately invoked, because it can
+% change the driver option.
+\HappyDoModule{engine-check}
+
+%----------------------------------- module 'dvipdfm-check'
+
+\HappyDeclareModule{dvipdfm-check}{DVIPDFM}{%
+  \IfFileExists{dvipdfmx.def}{%
+    \HappyError{Driver 'dvipdfm' is obsolete}%
+      {You should avoid it and use 'dvipdfmx' instead.\\%
+       Note also the software dvipdfm is obsolete and\\%
+       should be replaced by dvipdfmx.}%
+  }{}}
+\HappyDoModuleAtEndPackage{dvipdfm-check}
+
+%----------------------------------- module 'global'
+
+\HappyDeclareModule{global}{DVIPS,DVIPDFMX}{%
+  \bxhp@okfalse
+  \let\bxhp@pkg\@gobble
+  \def\bxhp@m@tmpa{#2}%
+  \def\bxhp@glb##1{%
+    \def\bxhp@m@tmpb{##1}%
+    \ifx\bxhp@m@tmpa\bxhp@m@tmpb \bxhp@oktrue \fi}%
+  \bxhp@drvoption@list
+  \ifbxhp@ok\else
+    \edef\@classoptionslist{%
+      \ifx\@classoptionslist\@empty\else\@classoptionslist,\fi
+      #2}%
+    \HappyWarning{Option '#2' is added to the global list}%
+      {You should add '#2' to the option list of\\%
+       \string\documentclass~command.}%
+  \fi}
+\HappyDoModuleAtEndPackage{global}
+
+%----------------------------------- module 'gracolor'
+
+\HappyDeclareModule{gracolor}{DVIPS}{%
+  \bxhp@m@gracolor{#2}{dvips}}
+\HappyDeclareModule{gracolor}{DVIPDFMX,PTEXNG}{%
+  \bxhp@m@gracolor{#2}{dvipdfmx}}
+\HappyDeclareModule{gracolor}{DVIPDFM}{%
+  \bxhp@m@gracolor{#2}{dvipdfm}}
+\HappyDeclareModule{gracolor}{XETEX,OTHERPDF,OTHERDVI}{%
+  \bxhp@m@gracolor{#2}{}}
+\@onlypreamble\bxhp@m@gracolor
+\def\bxhp@m@gracolor#1#2{%
+  \ifx\Gin@driver\@undefined\else
+    \let\bxhp@tmpb\@empty
+    \let\bxhp@m@gracolor@drv\@empty
+    \@for\bxhp@x:={dvips,dvipdfmx,dvipdfm}\do{%
+      \edef\bxhp@tmpa{\bxhp@x.def}%
+      \ifx\bxhp@tmpa\Gin@driver
+        \let\bxhp@m@gracolor@drv\bxhp@x
+      \else\if\bxhp@iscsdef{ver@\bxhp@x.def}%
+        \let\bxhp@tmpb\bxhp@x
+      \fi\fi}%
+    \def\bxhp@tmpa{#2}\ifx\bxhp@tmpa\bxhp@m@gracolor@drv
+      \ifx\bxhp@tmpb\@empty\else
+        \HappyError{Multiple graphicx/color drivers are loaded}%
+          {The right driver option is '\bxhp@tmpa', but the driver for option\\%
+          '\bxhp@tmpb' is also loaded.\\%
+          The packages graphicx/color might not work correctly.}%
+      \fi
+    \else
+      \HappyError{Wrong graphicx/color driver is used}%
+        {The driver option in effect is '\bxhp@basename\Gin@driver',\\%
+         but it should
+          \ifx\bxhp@tmpa\@empty not\else be '\bxhp@tmpa'\fi.}%
+    \fi
+  \fi}
+
+%----------------------------------- more modules
+
+%% load module definiions
+\input{\bxhp@pkgname-gen.def}
+\ifnum0\ifx j\bxhp@engine 1\fi
+       \ifx n\bxhp@engine 1\fi>\z@
+  \input{\bxhp@pkgname-ja.def}
+\fi
+
+%----------------------------------- all done
+\endinput
+%% EOF

@@ -1,0 +1,36 @@
+%
+% bxhappy-expl.def
+%
+%% file declaration
+\ProvidesFile{bxhappy-expl.def}[2015/08/01 v0.2]
+\ExplSyntaxOn
+
+%--------------------------------------- adjustments
+
+\cs_new_eq:NN \ptexext_if_engine:T    \use_none:n
+\cs_new_eq:NN \ptexext_if_engine:F    \use:n
+\cs_new_eq:NN \ptexext_if_engine:TF   \use_ii:nn
+\cs_new_eq:NN \ptexext_if_engine_p:   \c_false_bool
+
+\str_if_eq_x:nnT { \token_to_meaning:N \kanjiskip }
+  { \token_to_str:N \kanjiskip }
+  {
+    % I'm pTeX! The current judge is:
+    %   pdftex_if_engine = true
+    %   luatex_if_engine = false
+    %   xetex_if_engine  = false
+    \cs_gset_eq:NN \ptexext_if_engine:T    \use:n
+    \cs_gset_eq:NN \ptexext_if_engine:F    \use_none:n
+    \cs_gset_eq:NN \ptexext_if_engine:TF   \use_i:nn
+    \cs_gset_eq:NN \ptexext_if_engine_p:   \c_true_bool
+    % I'm not pdfTeX.
+    \cs_gset_eq:NN \pdftex_if_engine:T  \use_none:n
+    \cs_gset_eq:NN \pdftex_if_engine:F  \use:n
+    \cs_gset_eq:NN \pdftex_if_engine:TF \use_ii:nn
+    \cs_gset_eq:NN \pdftex_if_engine_p: \c_false_bool
+  }
+
+%--------------------------------------- done
+\ExplSyntaxOff
+\endinput
+%% EOF

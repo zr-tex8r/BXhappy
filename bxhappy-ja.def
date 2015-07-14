@@ -1,0 +1,44 @@
+%
+% bxhappy-ja.def
+%
+%% avoid duplicate loading
+\csname bxhappy-ja.def@loaded\endcsname
+\@namedef{bxhappy-ja.def@loaded}{\endinput}
+%% file declaration
+\ProvidesFile{bxhappy-ja.def}[2015/08/01]
+
+%----------------------------------- module 'pgf-mark-patch'
+
+\HappyDeclareModule{pgf-mark-patch}{DVIPDFMX}{%
+  \@ifpackageloaded{pgfcore}{%
+    \@ifpackageloaded{pxpgfmark}{}{%else
+      \bxhp@m@pgf@mark@patch
+      \@namedef{ver@pxpgfmark.sty}{2100/01/01}%
+    }%
+  }{}}
+\@onlypreamble\bxhp@m@pgf@mark@patch
+\def\bxhp@m@pgf@mark@patch{%
+  \def\bxhp@m@tmpa{pgfsys-dvipdfmx.def}
+  \ifx\pgfsysdriver\bxhp@m@tmpa
+    \@tempswatrue
+    \ifx\pdfsavepos\@undefined \@tempswafalse \fi
+    \ifx\pdflastxpos\@undefined \@tempswafalse \fi
+    \ifx\pdflastypos\@undefined \@tempswafalse \fi
+    \ifx\pgf@sys@pdf@dvi@tracker\@undefined \@tempswafalse \fi
+    \if@tempswa
+      \pgf@sys@pdf@dvi@tracker
+      \bxhp@info{Position marking enabled}%
+    \fi
+  \fi}
+
+%----------------------------------- done
+\endinput
+* mediabb対策 [tcxmediabb]
+- pstricks 対策 [bxdpx-pstricks]
+* Beamer [bxdpx-beamer/WL]
+- expl3 [bxexpl3ptex]
+* PGF/inter-picture [pxpgfmark/WL]
+- hyperref [pxjahyper/WL]
+- preview [bxdpc-preview]
+- [pxtatescale]
+%% EOF
